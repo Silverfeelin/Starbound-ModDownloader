@@ -25,32 +25,38 @@ namespace StarboundModDownloader.Downloader
         };
 
         /// <summary>
+        /// Gets or sets the Uri to the PlayStarbound resource.
+        /// </summary>
+        public Uri ResourceUri { get; set; }
+
+        /// <summary>
         /// xf2_session id, used to access the download (button).
         /// </summary>
-        private string sessionCookie;
+        public string SessionCookie { get; set; }
 
         /// <summary>
         /// Instantiates a new downloader for PlayStarbound resources.
         /// </summary>
-        /// <param name="sessionCookie">xf2_session cookie, used to access download link.</param>
-        public PlayStarboundDownloader(string sessionCookie)
-        {
-            this.sessionCookie = sessionCookie;
-        }
+        public PlayStarboundDownloader() { }
 
         /// <summary>
         /// Downloads the resource from a mod page.
         /// </summary>
         /// <param name="uri">Page to the mod resource (not the download link).</param>
         /// <returns>MemoryStream containing the downloaded file.</returns>
-        public async Task<DownloadResult> Download(Uri uri)
+        public async Task<DownloadResult> Download()
         {
-            Uri baseUri = new Uri(uri.GetLeftPart(UriPartial.Authority));
+            if (ResourceUri == null)
+            {
+                throw new ArgumentNullException("ResourceUri is null.");
+            }
+
+            Uri baseUri = new Uri(ResourceUri.GetLeftPart(UriPartial.Authority));
 
             // Get download link from download button.
             // XPath is really confusing and //label[@class='downloadButton']/a did not work.
             // TODO: Move this to a method since it can also be used to fetch the version number (which could be useful to poll for version changes for automated fetching).
-            string html = DownloadHtml(uri, sessionCookie);
+            string html = DownloadHtml(ResourceUri, SessionCookie);
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
             string downloadLocation = doc.DocumentNode
@@ -71,7 +77,7 @@ namespace StarboundModDownloader.Downloader
             try
             {
                 CookieContainer cookies = new CookieContainer();
-                cookies.Add(downloadUri, new Cookie("xf2_session", sessionCookie));
+                cookies.Add(downloadUri, new Cookie("xf2_session", SessionCookie));
                 return await DownloadToMemoryAsync(downloadUri, cookies);
             }
             catch (WebException exc)

@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="commandlineparser" Version="2.2.1" />
     <PackageReference Include="htmlagilitypack" Version="1.8.1" />
+    <PackageReference Include="newtonsoft.json" Version="11.0.2" />
   </ItemGroup>
 
 </Project>

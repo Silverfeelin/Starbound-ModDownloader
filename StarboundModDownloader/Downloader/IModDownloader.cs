@@ -8,6 +8,6 @@ namespace StarboundModDownloader.Downloader
 {
     public interface IModDownloader
     {
-        Task<DownloadResult> Download(Uri uri);
+        Task<DownloadResult> Download();
     }
 }

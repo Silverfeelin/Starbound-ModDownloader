@@ -2,6 +2,7 @@
 using StarboundModDownloader.Downloader;
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace StarboundModDownloader
 {
@@ -15,6 +16,12 @@ namespace StarboundModDownloader
 
         [Option('c', "cookie", Required = false, HelpText = "PlayStarbound session cookie (xf2_session), used to download from community.playstarbound.com.")]
         public string Cookie { get; set; }
+
+        [Option('p', "pattern", Required = false, HelpText = "Pattern for GitHub release assets. Use when omitting flag -s.")]
+        public string Pattern { get; set; }
+
+        [Option('s', "source", Required = false, HelpText = "Download source code instead of asset matching pattern.")]
+        public bool Source { get; set; }
 
         [Option("overwrite", Required = false, HelpText = "Overwrite output file, if the file already exists.")]
         public bool Overwrite { get; set; }
@@ -49,7 +56,7 @@ namespace StarboundModDownloader
                 DownloadType type = LinkHelper.GetDownloadType(options.Input);
                 Uri uri = new Uri(options.Input);
 
-                Console.WriteLine("Downloading from {0}...", type);
+                Console.WriteLine("Downloading from {0}. This may take a while...", type);
 
                 IModDownloader downloader = GetDownloader(type, options);
                 DownloadResult result = Download(downloader, uri);
@@ -78,15 +85,24 @@ namespace StarboundModDownloader
             switch (type)
             {
                 case DownloadType.GitHub:
-                    return new GitHubDownloader();
+                    Regex repoRegex = new Regex("(?:https:\\/\\/)?github\\.com\\/([\\w-]+)\\/([\\w-]+)");
+                    Match match = repoRegex.Match(options.Input);
+                    if (!match.Success)
+                    {
+                        throw new ArgumentException($"GitHub repository could not be parsed from '{options.Input}'.");
+                    }
+                    return DownloaderBuilder.BuildGitHubDownloader(
+                        match.Groups[1].Value,
+                        match.Groups[2].Value,
+                        !options.Source ? new Regex(options.Pattern) : null);
                 default:
                 case DownloadType.PlayStarbound:
                     if (string.IsNullOrWhiteSpace(options.Cookie))
                     {
-                        throw new ArgumentException("Flag 'c' not defined. Use --help for more information.");
+                        throw new ArgumentException("Flag '--cookie' not defined. Use --help for more information.");
                     }
 
-                    return new PlayStarboundDownloader(options.Cookie);
+                    return DownloaderBuilder.BuildPSBDownloader(new Uri(options.Input), options.Cookie);
             }
         }
 
@@ -97,7 +113,7 @@ namespace StarboundModDownloader
         /// <param name="uri">Download location.</param>
         static DownloadResult Download(IModDownloader downloader, Uri uri)
         {
-            var task = downloader.Download(uri);
+            var task = downloader.Download();
             task.Wait();
             return task.Result;
         }
