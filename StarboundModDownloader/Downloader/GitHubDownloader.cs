@@ -27,6 +27,8 @@ namespace StarboundModDownloader.Downloader
         /// Regex for asset names.
         /// </summary>
         public Regex AssetPattern { get; set; }
+        
+        public DownloadProgressChangedEventHandler DownloadProgressChangedEventHandler { get; set; }
 
         /// <summary>
         /// Download from GitHub repository.
@@ -70,6 +72,7 @@ namespace StarboundModDownloader.Downloader
             using (WebClient client = new WebClient())
             {
                 client.Headers.Add(HttpRequestHeader.UserAgent, "StarboundModDownloader");
+                client.DownloadProgressChanged += DownloadProgressChangedEventHandler;
                 byte[] data = await client.DownloadDataTaskAsync(uri);
                 ms = new MemoryStream(data);
             }
@@ -85,7 +88,7 @@ namespace StarboundModDownloader.Downloader
         /// </summary>
         /// <param name="latestRelease"></param>
         /// <returns></returns>
-        private string FindSource(JObject latestRelease)
+        public static string FindSource(JObject latestRelease)
         {
             return latestRelease["zipball_url"].Value<string>();
         }
@@ -95,12 +98,12 @@ namespace StarboundModDownloader.Downloader
         /// </summary>
         /// <param name="latestRelease">Latest release response.</param>
         /// <returns></returns>
-        private string FindAsset(JObject latestRelease, Regex pattern)
+        public static string FindAsset(JObject latestRelease, Regex pattern)
         {
             foreach (var item in latestRelease["assets"])
             {
                 string fileName = item["name"].Value<string>();
-                if (AssetPattern.IsMatch(fileName))
+                if (pattern.IsMatch(fileName))
                 {
                     return item["browser_download_url"].Value<string>();
                 }

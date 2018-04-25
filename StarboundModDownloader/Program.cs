@@ -2,6 +2,7 @@
 using StarboundModDownloader.Downloader;
 using System;
 using System.IO;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace StarboundModDownloader
@@ -57,9 +58,10 @@ namespace StarboundModDownloader
                 Uri uri = new Uri(options.Input);
 
                 Console.WriteLine("Downloading from {0}. This may take a while...", type);
-
                 IModDownloader downloader = GetDownloader(type, options);
                 DownloadResult result = Download(downloader, uri);
+
+                Console.WriteLine("Saving to {0}", options.OutputFile);
                 WarnFileType(options.OutputFile, result.FileType);
                 Save(result, options.OutputFile);
             }
@@ -91,10 +93,12 @@ namespace StarboundModDownloader
                     {
                         throw new ArgumentException($"GitHub repository could not be parsed from '{options.Input}'.");
                     }
-                    return DownloaderBuilder.BuildGitHubDownloader(
+                    var b = DownloaderBuilder.BuildGitHubDownloader(
                         match.Groups[1].Value,
                         match.Groups[2].Value,
                         !options.Source ? new Regex(options.Pattern) : null);
+                    b.DownloadProgressChangedEventHandler = DownloadProgressed;
+                    return b;
                 default:
                 case DownloadType.PlayStarbound:
                     if (string.IsNullOrWhiteSpace(options.Cookie))
@@ -106,6 +110,18 @@ namespace StarboundModDownloader
             }
         }
 
+        static int counter = 0;
+        static void DownloadProgressed(object sender, DownloadProgressChangedEventArgs args)
+        {
+            counter++;
+
+            if (counter % 1024 == 0)
+            {
+                Console.SetCursorPosition(0, Console.CursorTop);
+                Console.Write(args.BytesReceived / 1024 + " KB");
+            }
+        }
+
         /// <summary>
         /// Downloads a mod using the configured downloader.
         /// </summary>
@@ -113,8 +129,10 @@ namespace StarboundModDownloader
         /// <param name="uri">Download location.</param>
         static DownloadResult Download(IModDownloader downloader, Uri uri)
         {
+            Console.CursorVisible = false;
             var task = downloader.Download();
             task.Wait();
+            Console.CursorVisible = true;
             return task.Result;
         }
 
@@ -154,7 +172,7 @@ namespace StarboundModDownloader
                 case "application/zip":
                     if (!outputPath.ToLowerInvariant().EndsWith(".zip"))
                         Console.WriteLine("Warning: Downloaded file is a zip file, but output file does not end with '.zip'!");
-                        break;
+                    break;
             }
         }
     }
