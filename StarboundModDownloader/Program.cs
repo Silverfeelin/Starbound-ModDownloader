@@ -4,39 +4,77 @@ using System;
 using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace StarboundModDownloader
 {
-    public class Options
+    [Verb("github", HelpText = "Download asset or source code from GitHub.")]
+    public class GitHubOptions
     {
-        [Option('i', "input", Required = true, HelpText = "Mod URL. For PlayStarbound, use the link to the mod overview. For GitHub, use the GitHub repository link.")]
+        [Option('i', "input", Required = true, HelpText = "Resource URL. For example, https://community.playstarbound.com/resources/wardrobe.3704/")]
         public string Input { get; set; }
 
         [Option('o', "output", Required = true, HelpText = "Output file location. Directories leading up to the file must exist.")]
         public string OutputFile { get; set; }
 
-        [Option('c', "cookie", Required = false, HelpText = "PlayStarbound session cookie (xf2_session), used to download from community.playstarbound.com.")]
-        public string Cookie { get; set; }
+        [Option("overwrite", Required = false, HelpText = "Overwrite output file, if the file already exists.")]
+        public bool Overwrite { get; set; }
 
         [Option('p', "pattern", Required = false, HelpText = "Pattern for GitHub release assets. Use when omitting flag -s.")]
         public string Pattern { get; set; }
 
         [Option('s', "source", Required = false, HelpText = "Download source code instead of asset matching pattern.")]
         public bool Source { get; set; }
+    }
+
+    [Verb("psb", HelpText = "Download a mod from PlayStarbound.")]
+    public class PSBOptions
+    {
+        [Option('i', "input", Required = true, HelpText = "Resource URL. For example, https://community.playstarbound.com/resources/wardrobe.3704/")]
+        public string Input { get; set; }
+
+        [Option('o', "output", Required = true, HelpText = "Output file location. Directories leading up to the file must exist.")]
+        public string OutputFile { get; set; }
 
         [Option("overwrite", Required = false, HelpText = "Overwrite output file, if the file already exists.")]
         public bool Overwrite { get; set; }
+
+        [Option('s', "session", Required = true, HelpText = "Session cookie (xf2_session), used to access the resource.")]
+        public string Cookie { get; set; }
     }
 
     class Program
     {
         static void Main(string[] args)
         {
-            Parser.Default.ParseArguments<Options>(args)
-                .WithParsed(opts => Run(opts));
+            Parser.Default.ParseArguments<GitHubOptions, PSBOptions>(args)
+                .WithParsed<GitHubOptions>(gh => { })
+                .WithParsed<PSBOptions>(psb => { });
         }
 
-        static void Run(Options options)
+        static void DownloadFromGitHub(GitHubOptions options)
+        {
+            string url = options.Input;
+            GitHubDownloader downloader = new GitHubDownloader()
+            {
+                
+            };
+        }
+
+        static void DownloadFromPSB(PSBOptions options)
+        {
+            PlayStarboundDownloader downloader = new PlayStarboundDownloader()
+            {
+                ResourceUri = new Uri(options.Input),
+                SessionCookie = options.Cookie
+            };
+
+            Task<DownloadResult> task = downloader.Download();
+            task.Wait();
+            DownloadResult result = task.Result;
+        }
+
+        static void Run()
         {
             if (!ValidFileLocation(options.OutputFile))
             {

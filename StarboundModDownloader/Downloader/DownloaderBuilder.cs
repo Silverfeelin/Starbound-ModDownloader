@@ -16,7 +16,7 @@ namespace StarboundModDownloader.Downloader
             };
 
             d.DownloadSourceCode = pattern == null ? true : false;
-            d.AssetPattern = pattern;
+            d.Pattern = pattern;
 
             return d;
         }
