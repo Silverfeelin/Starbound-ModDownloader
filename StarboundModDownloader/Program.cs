@@ -117,7 +117,8 @@ namespace StarboundModDownloader
             {
                 User = user,
                 Repository = repo,
-                DownloadSourceCode = options.Source
+                DownloadSourceCode = options.Source,
+                PreviousVersion = options.PreviousVersion
             };
 
             if (!options.Source)
@@ -166,7 +167,8 @@ namespace StarboundModDownloader
                 downloader = new PlayStarboundDownloader()
                 {
                     ResourceLink = options.Input,
-                    SessionCookie = options.Cookie
+                    SessionCookie = options.Cookie,
+                    PreviousVersion = options.PreviousVersion
                 };
             }
             catch (ArgumentException exc)
@@ -258,7 +260,7 @@ namespace StarboundModDownloader
             catch (Exception exc)
             {
                 Console.CursorVisible = true;
-                Logger.LogError("Failed to download file. Did you supply a valid xf2_session id? Error: {0}", exc.Message);
+                Logger.LogError("Failed to download file. Error: {0}", exc.Message);
                 Debug.WriteLine(exc.ToString());
                 Environment.Exit(3);
                 return null;

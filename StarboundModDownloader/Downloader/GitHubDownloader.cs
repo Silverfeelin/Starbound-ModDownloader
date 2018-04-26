@@ -43,12 +43,22 @@ namespace StarboundModDownloader.Downloader
         /// For example, ".*\.pak" to download the first asset ending with `.pak`.
         /// </summary>
         public Regex Pattern { get; set; }
-        
+
+        /// <summary>
+        /// Download identifier of the previous version.
+        /// If set, aborts the download if the latest release tag matches this value.
+        /// </summary>
+        public string PreviousVersion { get; set; }
+
         /// <summary>
         /// Download from GitHub repository.
         /// </summary>
         /// <param name="uri">GitHub repository.</param>
         /// <returns>Download result.</returns>
+        /// <exception cref="ArgumentNullException">Asset pattern not set.</exception>
+        /// <exception cref="ArgumentException">No asset found matching pattern.</exception>
+        /// <exception cref="VersionException">Version matches previous version.</exception>
+        /// <exception cref="WebException">Download failed.</exception>
         public async Task<DownloadResult> Download()
         {
             if (!DownloadSourceCode && Pattern == null)
@@ -67,13 +77,26 @@ namespace StarboundModDownloader.Downloader
 
             JObject j = JObject.Parse(json);
 
+            // Check version
+            var version = j["tag_name"].Value<string>();
+            if (!string.IsNullOrEmpty(PreviousVersion))
+            {
+                if (version == PreviousVersion)
+                {
+                    throw new VersionException($"Latest download matches previous version {version}.");
+                }
+            }
+            Logger.LogInfo("Version: {0}", version);
+
             if (DownloadSourceCode)
             {
+                // Download source zip.
                 string source = FindSource(j);
                 return await Download(source);
             }
             else
             {
+                // Download first asset matching pattern.
                 string asset = FindAsset(j, Pattern);
                 if (string.IsNullOrEmpty(asset))
                 {

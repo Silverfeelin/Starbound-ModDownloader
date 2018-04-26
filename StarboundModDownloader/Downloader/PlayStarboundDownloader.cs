@@ -57,6 +57,12 @@ namespace StarboundModDownloader.Downloader
         public string SessionCookie { get; set; }
 
         /// <summary>
+        /// Download identifier of the previous version.
+        /// If set, aborts the download if the found download matches this version.
+        /// </summary>
+        public string PreviousVersion { get; set; }
+
+        /// <summary>
         /// Instantiates a new downloader for PlayStarbound resources.
         /// </summary>
         public PlayStarboundDownloader() { }
@@ -68,6 +74,9 @@ namespace StarboundModDownloader.Downloader
         /// </summary>
         /// <param name="uri">Page to the mod resource (not the download link).</param>
         /// <returns>MemoryStream containing the downloaded file.</returns>
+        /// <exception cref="ArgumentNullException">ResourceLink not set.</exception>
+        /// <exception cref="VersionException">Version matches previous version.</exception>
+        /// <exception cref="WebException">Download failed.</exception>
         public async Task<DownloadResult> Download()
         {
             if (ResourceLink == null)
@@ -93,6 +102,17 @@ namespace StarboundModDownloader.Downloader
                 })
                 .First()
                 .Attributes["href"].Value;
+
+            // Check version
+            var version = downloadLocation.Substring(downloadLocation.LastIndexOf("?version=") + 9);
+            if (!string.IsNullOrEmpty(PreviousVersion))
+            {
+                if (version == PreviousVersion)
+                {
+                    throw new VersionException($"Latest download matches previous version {version}.");
+                }
+            }
+            Logger.LogInfo("Version: {0}", version);
 
             // Resource download location.
             var downloadUri = new Uri(baseUri, downloadLocation);
