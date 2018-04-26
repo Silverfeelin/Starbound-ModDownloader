@@ -3,6 +3,7 @@ using StarboundModDownloader.Downloader;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -254,6 +255,14 @@ namespace StarboundModDownloader
                 Logger.LogError("Failed to download file. Error: {0}", exc.Message);
                 Debug.WriteLine(exc.ToString());
                 Environment.Exit(1);
+                return null;
+            }
+            catch (WebException exc)
+            {
+                Console.CursorVisible = true;
+                Logger.LogError("Failed to download file. Did you supply a valid xf2_session id?\nError: {0}", exc.Message);
+                Debug.WriteLine(exc.ToString());
+                Environment.Exit(3);
                 return null;
             }
             catch (Exception exc)
