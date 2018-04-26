@@ -129,7 +129,7 @@ namespace StarboundModDownloader
                 }
                 catch (Exception exc)
                 {
-                    Logger.LogError("Incorrect pattern {0}.", options.Pattern);
+                    Logger.LogError("Incorrect pattern: {0}", options.Pattern);
                     Debug.WriteLine(exc.ToString());
                     Environment.Exit(1);
                     return;
