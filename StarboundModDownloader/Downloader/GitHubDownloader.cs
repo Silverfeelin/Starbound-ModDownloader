@@ -13,23 +13,37 @@ namespace StarboundModDownloader.Downloader
 {
     public class GitHubDownloader : IModDownloader
     {
+        /// <summary>
+        /// Used to validate a GitHub URL.
+        /// Group 1: User/Organization
+        /// Group 2: Repository
+        /// </summary>
+        public static readonly Regex REPOSITORY_REGEX = new Regex("(?:https:\\/\\/)?github\\.com\\/([\\w-]+)\\/([\\w-]+)");
+
+        public event ProgressChangedHandler OnDownloadProgressChanged;
+
+        /// <summary>
+        /// Username or organization name.
+        /// </summary>
         public string User { get; set; }
 
+        /// <summary>
+        /// Repository name.
+        /// </summary>
         public string Repository { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the source code is downloaded.
-        /// If false, uses the asset pattern instead.
+        /// Gets or sets a value indicating whether the source code should be downloaded.
+        /// If false, uses the <see cref="Pattern"/> instead.
         /// </summary>
         public bool DownloadSourceCode { get; set; } = false;
 
         /// <summary>
-        /// Regex for asset names.
+        /// Regex pattern used when determining the release asset to download.
+        /// For example, ".*\.pak" to download the first asset ending with `.pak`.
         /// </summary>
-        public Regex AssetPattern { get; set; }
+        public Regex Pattern { get; set; }
         
-        public DownloadProgressChangedEventHandler DownloadProgressChangedEventHandler { get; set; }
-
         /// <summary>
         /// Download from GitHub repository.
         /// </summary>
@@ -37,7 +51,7 @@ namespace StarboundModDownloader.Downloader
         /// <returns>Download result.</returns>
         public async Task<DownloadResult> Download()
         {
-            if (!DownloadSourceCode && AssetPattern == null)
+            if (!DownloadSourceCode && Pattern == null)
             {
                 throw new ArgumentNullException("Asset pattern is empty for GitHub Downloader.");
             }
@@ -60,7 +74,11 @@ namespace StarboundModDownloader.Downloader
             }
             else
             {
-                string asset = FindAsset(j, AssetPattern);
+                string asset = FindAsset(j, Pattern);
+                if (string.IsNullOrEmpty(asset))
+                {
+                    throw new ArgumentException($"No asset found matching the given asset pattern: {Pattern}");
+                }
                 return await Download(asset);
             }
         }
@@ -72,14 +90,24 @@ namespace StarboundModDownloader.Downloader
             using (WebClient client = new WebClient())
             {
                 client.Headers.Add(HttpRequestHeader.UserAgent, "StarboundModDownloader");
-                client.DownloadProgressChanged += DownloadProgressChangedEventHandler;
+                client.DownloadProgressChanged += (e, d) =>
+                {
+                    OnDownloadProgressChanged?.Invoke(d.BytesReceived);
+                };
+
                 byte[] data = await client.DownloadDataTaskAsync(uri);
                 ms = new MemoryStream(data);
             }
+
+            string fileType = Path.GetExtension(url);
+            if (!string.IsNullOrWhiteSpace(fileType))
+                fileType = fileType.Substring(1).ToLowerInvariant();
+
             return new DownloadResult()
             {
                 MemoryStream = ms,
-                FileType = Path.GetExtension(url)
+                FileType = fileType,
+                TotalBytes = ms.Length
             };
         }
 
@@ -110,6 +138,30 @@ namespace StarboundModDownloader.Downloader
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Gets the user/organization and repository name from a GitHub repository URL.
+        /// </summary>
+        /// <param name="url">GitHub repository url.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static (string user, string repository) GetRepositoryName(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new ArgumentNullException("URL is empty or null.");
+            }
+
+            Match match = REPOSITORY_REGEX.Match(url);
+
+            if (!match.Success)
+            {
+                throw new ArgumentException("URL is not a supported GitHub repository link.");
+            }
+
+            return (match.Groups[1].Value, match.Groups[2].Value);
         }
     }
 }

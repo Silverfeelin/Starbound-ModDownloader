@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace StarboundModDownloader.Downloader
@@ -15,6 +16,7 @@ namespace StarboundModDownloader.Downloader
     /// </summary>
     public class PlayStarboundDownloader : IModDownloader
     {
+        public static readonly Regex RESOURCE_REGEX = new Regex("https:\\/\\/community\\.playstarbound\\.com\\/resources\\/[\\w-.]*\\/?");
         /// <summary>
         /// Supported file types.
         /// </summary>
@@ -24,10 +26,30 @@ namespace StarboundModDownloader.Downloader
             "application/octet-stream" // Binary (we'll have to assume it's a valid .pak).
         };
 
+        private Uri _resourceUri;
+
         /// <summary>
-        /// Gets or sets the Uri to the PlayStarbound resource.
+        /// Gets or sets the link to the PlayStarbound resource.
         /// </summary>
-        public Uri ResourceUri { get; set; }
+        /// <exception cref="ArgumentException">Incorrect resource link.</exception>
+        public string ResourceLink
+        {
+            get
+            {
+                return _resourceUri.AbsolutePath;
+            }
+            set
+            {
+                if (RESOURCE_REGEX.IsMatch(value))
+                {
+                    _resourceUri = new Uri(value);
+                }
+                else
+                {
+                    throw new ArgumentException("Link is not a valid PlayStarbound resource link.");
+                }
+            }
+        }
 
         /// <summary>
         /// xf2_session id, used to access the download (button).
@@ -39,6 +61,8 @@ namespace StarboundModDownloader.Downloader
         /// </summary>
         public PlayStarboundDownloader() { }
 
+        public event ProgressChangedHandler OnDownloadProgressChanged;
+
         /// <summary>
         /// Downloads the resource from a mod page.
         /// </summary>
@@ -46,17 +70,17 @@ namespace StarboundModDownloader.Downloader
         /// <returns>MemoryStream containing the downloaded file.</returns>
         public async Task<DownloadResult> Download()
         {
-            if (ResourceUri == null)
+            if (ResourceLink == null)
             {
                 throw new ArgumentNullException("ResourceUri is null.");
             }
 
-            Uri baseUri = new Uri(ResourceUri.GetLeftPart(UriPartial.Authority));
+            Uri baseUri = new Uri(_resourceUri.GetLeftPart(UriPartial.Authority));
 
             // Get download link from download button.
             // XPath is really confusing and //label[@class='downloadButton']/a did not work.
             // TODO: Move this to a method since it can also be used to fetch the version number (which could be useful to poll for version changes for automated fetching).
-            string html = DownloadHtml(ResourceUri, SessionCookie);
+            string html = DownloadHtml(_resourceUri, SessionCookie);
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
             string downloadLocation = doc.DocumentNode
@@ -136,6 +160,8 @@ namespace StarboundModDownloader.Downloader
                     throw new FileTypeException($"Content Type {response.ContentType} not supported by PlaystarboundDownloader.");
                 }
 
+                long total = 0;
+
                 // Read file to memory.
                 byte[] buffer = new byte[4096];
 
@@ -147,10 +173,18 @@ namespace StarboundModDownloader.Downloader
                     {
                         read = responseStream.Read(buffer, 0, buffer.Length);
                         memoryStream.Write(buffer, 0, read);
+
+                        total += read;
+                        OnDownloadProgressChanged?.Invoke(total);
                     } while (read > 0);
                 }
 
-                return new DownloadResult() { MemoryStream = memoryStream, FileType = response.ContentType };
+                return new DownloadResult()
+                {
+                    MemoryStream = memoryStream,
+                    FileType = response.ContentType,
+                    TotalBytes = memoryStream.Length
+                };
             }
         }
     }
