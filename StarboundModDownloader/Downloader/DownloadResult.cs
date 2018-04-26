@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 
 namespace StarboundModDownloader.Downloader
 {
@@ -9,5 +6,7 @@ namespace StarboundModDownloader.Downloader
     {
         public MemoryStream MemoryStream { get; set; }
         public string FileType { get; set; }
+
+        public long TotalBytes { get; set; }
     }
 }

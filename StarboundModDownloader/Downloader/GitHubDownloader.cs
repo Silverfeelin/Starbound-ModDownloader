@@ -18,7 +18,9 @@ namespace StarboundModDownloader.Downloader
         /// Group 1: User/Organization
         /// Group 2: Repository
         /// </summary>
-        public static readonly Regex REGEX = new Regex("(?:https:\\/\\/)?github\\.com\\/([\\w-]+)\\/([\\w-]+)");
+        public static readonly Regex REPOSITORY_REGEX = new Regex("(?:https:\\/\\/)?github\\.com\\/([\\w-]+)\\/([\\w-]+)");
+
+        public event ProgressChangedHandler OnDownloadProgressChanged;
 
         /// <summary>
         /// Username or organization name.
@@ -73,6 +75,10 @@ namespace StarboundModDownloader.Downloader
             else
             {
                 string asset = FindAsset(j, Pattern);
+                if (string.IsNullOrEmpty(asset))
+                {
+                    throw new ArgumentException($"No asset found matching the given asset pattern: {Pattern}");
+                }
                 return await Download(asset);
             }
         }
@@ -84,14 +90,24 @@ namespace StarboundModDownloader.Downloader
             using (WebClient client = new WebClient())
             {
                 client.Headers.Add(HttpRequestHeader.UserAgent, "StarboundModDownloader");
-                client.DownloadProgressChanged += DownloadProgressChangedEventHandler;
+                client.DownloadProgressChanged += (e, d) =>
+                {
+                    OnDownloadProgressChanged?.Invoke(d.BytesReceived);
+                };
+
                 byte[] data = await client.DownloadDataTaskAsync(uri);
                 ms = new MemoryStream(data);
             }
+
+            string fileType = Path.GetExtension(url);
+            if (!string.IsNullOrWhiteSpace(fileType))
+                fileType = fileType.Substring(1).ToLowerInvariant();
+
             return new DownloadResult()
             {
                 MemoryStream = ms,
-                FileType = Path.GetExtension(url)
+                FileType = fileType,
+                TotalBytes = ms.Length
             };
         }
 
@@ -122,6 +138,30 @@ namespace StarboundModDownloader.Downloader
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Gets the user/organization and repository name from a GitHub repository URL.
+        /// </summary>
+        /// <param name="url">GitHub repository url.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static (string user, string repository) GetRepositoryName(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new ArgumentNullException("URL is empty or null.");
+            }
+
+            Match match = REPOSITORY_REGEX.Match(url);
+
+            if (!match.Success)
+            {
+                throw new ArgumentException("URL is not a supported GitHub repository link.");
+            }
+
+            return (match.Groups[1].Value, match.Groups[2].Value);
         }
     }
 }
