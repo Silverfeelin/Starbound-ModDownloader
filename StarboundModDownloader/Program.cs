@@ -253,6 +253,22 @@ namespace StarboundModDownloader
                 Console.CursorVisible = true;
                 return result;
             }
+            catch (AggregateException exc)
+            {
+                exc.Handle((x) =>
+                {
+                    if (x is VersionException)
+                    {
+                        Console.CursorVisible = true;
+                        Logger.LogError(x.Message);
+                        Debug.WriteLine(exc.ToString());
+                        Environment.Exit(2);
+                        return true;
+                    }
+                    return false;
+                });
+                return null;
+            }
             catch (ArgumentException exc)
             {
                 Console.CursorVisible = true;
