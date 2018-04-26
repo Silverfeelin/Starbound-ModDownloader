@@ -257,18 +257,10 @@ namespace StarboundModDownloader
                 Environment.Exit(1);
                 return null;
             }
-            catch (WebException exc)
-            {
-                Console.CursorVisible = true;
-                Logger.LogError("Failed to download file. Did you supply a valid xf2_session id?\nError: {0}", exc.Message);
-                Debug.WriteLine(exc.ToString());
-                Environment.Exit(3);
-                return null;
-            }
             catch (Exception exc)
             {
                 Console.CursorVisible = true;
-                Logger.LogError("Failed to download file. Error: {0}", exc.Message);
+                Logger.LogError("Failed to download file. Did you supply a valid xf2_session id? Error: {0}", exc.Message);
                 Debug.WriteLine(exc.ToString());
                 Environment.Exit(3);
                 return null;
