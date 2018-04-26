@@ -79,7 +79,11 @@ namespace StarboundModDownloader
         {
             Parser.Default.ParseArguments<GitHubOptions, PSBOptions>(args)
                 .WithParsed<GitHubOptions>(DownloadFromGitHub)
-                .WithParsed<PSBOptions>(DownloadFromPSB);
+                .WithParsed<PSBOptions>(DownloadFromPSB)
+                .WithNotParsed(e =>
+                {
+                    Environment.Exit(1);
+                });
         }
 
         /// <summary>
