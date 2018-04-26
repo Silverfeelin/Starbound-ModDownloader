@@ -94,7 +94,6 @@ namespace StarboundModDownloader
             Logger.LogInfo("    Output: {0}", options.OutputFile);
             Logger.LogInfo(" Overwrite: {0}", options.Overwrite);
             Logger.LogInfo("Downloading...");
-            Console.WriteLine();
 
             // Check arguments.
             ConfirmOutputFile(options.OutputFile, options.Overwrite);
@@ -157,7 +156,6 @@ namespace StarboundModDownloader
             Logger.LogInfo("    Output: {0}", options.OutputFile);
             Logger.LogInfo(" Overwrite: {0}", options.Overwrite);
             Logger.LogInfo("Downloading...");
-            Console.WriteLine();
 
             // Check arguments.
             ConfirmOutputFile(options.OutputFile, options.Overwrite);
