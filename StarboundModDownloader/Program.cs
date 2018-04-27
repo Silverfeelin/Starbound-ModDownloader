@@ -265,6 +265,14 @@ namespace StarboundModDownloader
                         Environment.Exit(2);
                         return true;
                     }
+                    else if (x is WebException)
+                    {
+                        Console.CursorVisible = true;
+                        Logger.LogError("Failed to download file. Error: {0}", exc.Message);
+                        Debug.WriteLine(exc.ToString());
+                        Environment.Exit(3);
+                        return true;
+                    }
                     return false;
                 });
                 return null;
